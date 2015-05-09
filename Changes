@@ -1,0 +1,13 @@
+Revision history for Ovirt
+
+0.02	- fixed pod typo on rtrim
+		- add migrate vm 
+		- get host id on each running vm
+		- fixed array element bug when specifying id as list method argument
+		- add host module
+
+0.01    Ovirt
+        First version. support :
+        - list vm, template, cluster
+        - start, stop, reboot, create, remove vm
+	
