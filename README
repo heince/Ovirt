@@ -28,6 +28,8 @@ perldoc command.
     perldoc Ovirt::VM
     perldoc Ovirt::Template
     perldoc Ovirt::Cluster
+    perldoc Ovirt::Host
+    perldoc Ovirt::Display
 
 You can also look for information at:
 
