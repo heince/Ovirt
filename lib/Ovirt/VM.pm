@@ -1,6 +1,6 @@
 package Ovirt::VM;
 
-use v5.16;
+use v5.10;
 use LWP::UserAgent;
 use XML::LibXML;
 use Carp;
@@ -82,17 +82,19 @@ Version 0.02
  vm_output_delimiter    = (rw) specify output delimiter between attribute, default is '||'
  vm_output_attrs        = (rw) store vm attributes to be returned, default is (id, name, state)
                           supported attributes :
-                            id          name    
-                            memory      description
-                            state       cpu_cores
-                            cpu_sockets cpu_arch
-                            cpu_shares  os_type
-                            boot_dev    ha_enabled
-                            ha_priority display_type
-                            cluster_id  template_id
-                            stop_time   creation_time
-                            timezone    usb_enabled
-                            host_id
+                            id              name    
+                            memory          description
+                            state           cpu_cores
+                            cpu_sockets     cpu_arch
+                            cpu_shares      os_type
+                            boot_dev        ha_enabled
+                            ha_priority     display_type
+                            display_address display_port
+                            cluster_id      template_id
+                            stop_time       creation_time
+                            timezone        usb_enabled
+                            host_id         display_host_subject
+                            
 =cut
 
 has 'vm_url'                => ( is => 'ro', default => '/api/vms' );
@@ -107,17 +109,18 @@ has 'vm_output_attrs'       => ( is => 'rw', default => 'id,name,state',
                                      
                                      # check if provided attribute is valid / supported
                                      my @supported_attr = qw |
-                                                                id          name    
-                                                                memory      description
-                                                                state       cpu_cores
-                                                                cpu_sockets cpu_arch
-                                                                cpu_shares  os_type
-                                                                boot_dev    ha_enabled
-                                                                ha_priority display_type
-                                                                cluster_id  template_id
-                                                                stop_time   creation_time
-                                                                timezone    usb_enabled
-                                                                host_id
+                                                                id              name    
+                                                                memory          description
+                                                                state           cpu_cores
+                                                                cpu_sockets     cpu_arch
+                                                                cpu_shares      os_type
+                                                                boot_dev        ha_enabled
+                                                                ha_priority     display_type
+                                                                display_address display_port
+                                                                cluster_id      template_id
+                                                                stop_time       creation_time
+                                                                timezone        usb_enabled
+                                                                host_id         display_host_subject
                                                             |;
                                      for my $attr (@attrs) {
                                          $attr = lc ($attr);
@@ -501,6 +504,54 @@ sub reboot {
     $self->vm_action_output($output);
 }
 
+=head2 suspend
+
+ suspend vm
+ required arguments ($vmid)
+ if $self->id is set during initialization, argument is not required
+=cut
+
+sub suspend {
+    my $self = shift;
+    
+    my $vmid = shift || undef;
+    my $suspend_url;
+    
+    # set the suspend final url
+    if ($self->id) {
+        $suspend_url = $self->url . "/suspend";
+    }
+    else {
+        if ($vmid) {
+            my $is_valid = $self->is_vmid_valid($vmid);
+            croak "vm id not found" unless $is_valid;
+            
+            $suspend_url = $self->url . "/$vmid/suspend";
+        }
+        else {
+            croak "vm id is required";
+        }
+    }
+    
+    $self->log->debug("suspend action url = $suspend_url");
+    
+    # set user agent
+    my $ua      = LWP::UserAgent->new();
+    my $action;
+    
+    if ($self->vm_boot_dev eq 'hd') {
+        $action = $ua->post($suspend_url, Content_Type => 'application/xml', Content => $self->vm_hd_xml);
+    }
+    else {
+        $action = $ua->post($suspend_url, Content_Type => 'application/xml', Content => $self->vm_cdrom_xml);   
+    }
+    
+    my $parser = XML::LibXML->new();
+    my $output = $parser->parse_string($action->decoded_content);
+    
+    $self->vm_action_output($output);
+}
+
 =head2 migrate
 
  migrate vm
@@ -564,7 +615,7 @@ sub is_vmid_valid {
     $self->log->debug("vm id = $vmid");
     
     # if vm id match, return 1
-    for my $element_id (keys $self->hash_output->{vm}) {
+    for my $element_id (0 .. $#{ $self->hash_output->{vm} }) {
         if ($self->hash_output->{vm}[$element_id]->{id} eq $vmid) {
             $self->log->debug("$vmid is valid");
             return 1;
@@ -599,7 +650,7 @@ sub list {
     # store the last element to escape the vm_output_delimeter
     my $last_element = pop (@attrs);
     $self->log->debug("last element = $last_element");
-    
+
     # if the id is defined during initialization
     # the rest api output will only contain attributes for this id
     # so it's not necessary to loop on vm element
@@ -628,8 +679,12 @@ sub list {
         
         $vmid = $self->trim($vmid);
         
-        for my $element_id (keys $self->hash_output->{vm}) {
-            next unless $self->hash_output->{vm}[$element_id]->{id} eq $vmid;
+        # store hash to avoid keys on reference
+        #my %hash = $self->hash_output->{vm};
+        
+        for my $element_id ( 0 .. $#{ $self->hash_output->{vm} } ) {
+            next unless 
+                $self->hash_output->{vm}[$element_id]->{id} eq $vmid;
             
             $vmid_element = $element_id;
         }
@@ -656,7 +711,7 @@ sub list {
     }
     else {
         
-        for my $element_id (keys $self->hash_output->{vm}) {
+        for my $element_id ( 0 .. $#{ $self->hash_output->{vm} } ) {
             
             # in case there's no any element left, the last element become the only attribute requested
             if (@attrs) {
@@ -744,6 +799,19 @@ sub get_vm_by_element_id {
     elsif   ($attr eq 'display_type') {
             return $self->hash_output->{vm}[$element_id]->{display}->{type};
     }
+    elsif   ($attr eq 'display_address') {
+            return $self->hash_output->{vm}[$element_id]->{display}->{address};
+    }
+    elsif   ($attr eq 'display_port') {
+            # spice will return secure_port
+            # vnc will return port
+            return $self->hash_output->{vm}[$element_id]->{display}->{secure_port}
+                if $self->hash_output->{vm}[$element_id]->{display}->{secure_port};
+            return $self->hash_output->{vm}[$element_id]->{display}->{port}
+    }
+    elsif   ($attr eq 'display_host_subject') {
+            return $self->hash_output->{vm}[$element_id]->{display}->{certificate}->{subject};
+    }
     elsif   ($attr eq 'cluster_id') {
             return $self->hash_output->{vm}[$element_id]->{cluster}->{id};
     }
@@ -826,6 +894,19 @@ sub get_vm_by_self_id {
     }
     elsif   ($attr eq 'display_type') {
             return $self->hash_output->{display}->{type};
+    }
+    elsif   ($attr eq 'display_address') {
+            return $self->hash_output->{display}->{address};
+    }
+    elsif   ($attr eq 'display_port') {
+            # spice will return secure_port
+            # vnc will return port
+            return $self->hash_output->{display}->{secure_port}
+                if $self->hash_output->{display}->{secure_port};
+            return $self->hash_output->{display}->{port};
+    }
+    elsif   ($attr eq 'display_host_subject') {
+            return $self->hash_output->{display}->{certificate}->{subject};
     }
     elsif   ($attr eq 'cluster_id') {
             return $self->hash_output->{cluster}->{id};
