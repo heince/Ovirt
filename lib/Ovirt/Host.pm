@@ -1,6 +1,6 @@
 package Ovirt::Host;
 
-use v5.16;
+use v5.10;
 use Carp;
 use Moo;
 
@@ -192,7 +192,7 @@ sub list {
         $hostid = $self->trim($hostid);
         $self->log->debug("host id = $hostid");
         
-        for my $element_id (keys $self->hash_output->{host}) {
+        for my $element_id ( 0 .. $#{ $self->hash_output->{host} } ) {
             next unless $self->hash_output->{host}[$element_id]->{id} eq $hostid;
             
             $hostid_element = $element_id;
@@ -220,8 +220,7 @@ sub list {
         $output .= "\n";
     }
     else {
-        
-        for my $element_id (keys $self->hash_output->{host}) {
+        for my $element_id ( 0 .. $#{ $self->hash_output->{host} } ) {
             
             # in case there's no any element left, the last element become the only attribute requested
             if (@attrs) {

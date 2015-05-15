@@ -1,6 +1,6 @@
 package Ovirt::Template;
 
-use v5.16;
+use v5.10;
 use Carp;
 use Moo;
 
@@ -193,7 +193,7 @@ sub list {
         
         $templateid = $self->trim($templateid);
         
-        for my $element_id (keys $self->hash_output->{template}) {
+        for my $element_id ( 0 .. $#{ $self->hash_output->{template} } ) {
             next unless $self->hash_output->{template}[$element_id]->{id} eq $templateid;
             
             $templateid_element = $element_id;
@@ -221,7 +221,7 @@ sub list {
     }
     else {
         
-        for my $element_id (keys $self->hash_output->{template}) {
+        for my $element_id ( 0 .. $#{ $self->hash_output->{template} } ) {
             
             # in case there's no any element left, the last element become the only attribute requested
             if (@attrs) {

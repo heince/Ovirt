@@ -1,6 +1,6 @@
 package Ovirt::Cluster;
 
-use v5.16;
+use v5.10;
 use Carp;
 use Moo;
 
@@ -185,7 +185,7 @@ sub list {
         
         $clusterid = $self->trim($clusterid);
         
-        for my $element_id (keys $self->hash_output->{cluster}) {
+        for my $element_id ( 0 .. $#{ $self->hash_output->{cluster} } ) {
             next unless $self->hash_output->{cluster}[$element_id]->{id} eq $clusterid;
             
             $clusterid_element = $element_id;
@@ -213,7 +213,7 @@ sub list {
     }
     else {
         
-        for my $element_id (keys $self->hash_output->{cluster}) {
+        for my $element_id ( 0 .. $#{ $self->hash_output->{vm} } ) {
             
             # in case there's no any element left, the last element become the only attribute requested
             if (@attrs) {
