@@ -1,9 +1,15 @@
 Revision history for Ovirt
 
-0.02	- fixed pod typo on rtrim
+0.03	- add display module
+		- fix keys on reference
+		- add more vm attributes to query
+		- add suspend vm method
+
+
+0.02	- fix pod typo on rtrim
 		- add migrate vm 
 		- get host id on each running vm
-		- fixed array element bug when specifying id as list method argument
+		- fix array element bug when specifying id as list method argument
 		- add host module
 
 0.01    Ovirt
