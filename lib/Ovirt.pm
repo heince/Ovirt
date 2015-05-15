@@ -1,6 +1,6 @@
 package Ovirt;
 
-use v5.16;
+use v5.10;
 use LWP::UserAgent;
 use Scalar::Util qw(looks_like_number);
 use Carp;
@@ -26,6 +26,7 @@ our $VERSION = '0.02';
  use Ovirt::Template;
  use Ovirt::Cluster;
  use Ovirt::Host;
+ use Ovirt::Display;
 
  my %con = (
             username                => 'admin',
@@ -73,7 +74,36 @@ our $VERSION = '0.02';
  # we can also specify specific vm 'id' when initiating an object
  # so we can direct access the element for specific vm
  print $vm->hash_output->{name};                   
- print $vm->hash_output->{cluster}->{id};         
+ print $vm->hash_output->{cluster}->{id};
+ 
+ # Generate display configuration for remote viewer
+ my $display = Ovirt::Display->new(%con);
+ print $display->generate();
+
+ sample spice configuration output :
+ [virt-viewer]
+    type=spice
+    host=192.168.1.152
+    port=-1
+    password=+cnsq458Oq6T
+    # Password is valid for 300 seconds.
+    tls-port=5902
+    fullscreen=0
+    title=C1 : %d - Press SHIFT+F12 to Release Cursor
+    enable-smartcard=0
+    enable-usb-autoshare=1
+    delete-this-file=1
+    usb-filter=-1,-1,-1,-1,0
+    tls-ciphers=DEFAULT
+    host-subject=O=example.com,CN=192.168.1.152
+    ca=-----BEGIN CERTIFICATE-----\n -- output removed -- S2fE=\n-----END CERTIFICATE-----\n
+    toggle-fullscreen=shift+f11
+    release-cursor=shift+f12
+    secure-attention=ctrl+alt+end
+    secure-channels=main;inputs;cursor;playback;record;display;usbredir;smartcard
+
+ you can save it to a file then use remote viewer to open it:
+ $ remote-viewer [your saved file].vv         
 
 =head1 Attributes
 
@@ -101,8 +131,6 @@ notes :
  hash_output    = (rwp) store hash output converted from xml output
 
 =cut
-
-requires qw /list_xml list/;
 
 has [qw/url root_url xml_output hash_output log/]   => ( is => 'rwp' );
 has [qw/id/]                                        => ( is => 'ro' );
@@ -150,6 +178,7 @@ has 'log_severity'  => (is => 'ro',
  - perldoc Ovirt::Template
  - perldoc Ovirt::Cluster
  - perldoc Ovirt::Host
+ - perldoc Ovirt::Display
 
 =head2 BUILD
 
